@@ -1,2 +1,3 @@
 # regex-scraper
-Web scraper for Wikipedia articles in Python, extracting index, images, and links using only regular expressions, without HTML parsing libraries.
+
+Web scraper para artigos da Wikipedia escrito em Python, extraíndo índice, imagens and links usando expressões regulares.
