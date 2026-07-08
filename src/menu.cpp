@@ -28,6 +28,7 @@
 #define COLOR_GREEN   "\033[32m"
 #define COLOR_RED     "\033[31m"
 #define COLOR_MAGENTA "\033[35m"
+#define COLOR_BLUE    "\033[34m"
 
 /**
  * Decodifica uma string HTML, substituindo entidades HTML por seus caracteres correspondentes.
@@ -275,11 +276,128 @@ void show_images(const std::string& html_content) {
 		}
 
 		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+
+		// Opção para acessar uma imagem específica
+		std::cout << "  Digite o número de uma imagem para abrir no navegador (0 para voltar): ";
+
+		std::string input;
+		std::getline(std::cin, input);
+
+		if (!input.empty()) {
+			int choice = std::stoi(input);
+			if (choice > 0 && choice <= static_cast<int>(image_items.size())) {
+				// Abrir a imagem escolhida no navegador
+				std::string image_url = image_items[choice-1].first;
+				display_success("Abrindo imagem: " + image_url);
+
+				// Comando para abrir URL no navegador padrão
+				#ifdef _WIN32
+					std::string cmd = "start " + image_url;
+				#elif __APPLE__
+					std::string cmd = "open " + image_url;
+				#else
+					std::string cmd = "xdg-open " + image_url;
+				#endif
+
+				int result = system(cmd.c_str());
+				if (result != 0) {
+					display_error("Falha ao abrir a imagem no navegador.");
+				} else {
+					display_success("Imagem aberta no navegador.");
+				}
+				wait_enter();
+			} else if (choice == 0) {
+				// Voltar
+			} else {
+				display_error("Número inválido.");
+				wait_enter();
+			}
+		}
 	} else {
 		display_error("Nenhuma imagem encontrada no artigo.");
+		wait_enter();
 	}
+}
 
-	wait_enter();
+/**
+ * Exibe os links para outros artigos da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_links(const std::string& html_content) {
+	auto link_items = regex_core::extract_wikipedia_links(html_content);
+
+	// Decodifica os textos dos links
+	for (auto& item : link_items)
+		item.second = decode_html(item.second);
+
+	if (!link_items.empty()) {
+		CLEAR_SCREEN();
+		display_header("Links para Outros Artigos");
+
+		// Limitar a exibição para não sobrecarregar
+		size_t max_display = std::min(link_items.size(), size_t(30));
+
+		std::cout << COLOR_YELLOW << "Total de links encontrados: " << link_items.size() << COLOR_RESET << "\n\n";
+
+		// Calcula largura máxima para alinhamento
+		size_t max_width = 0;
+		for (size_t i = 0; i < max_display; ++i)
+			max_width = std::max(max_width, std::to_string(i + 1).length());
+
+		// Exibe itens formatados
+		for (size_t i = 0; i < max_display; ++i) {
+			const auto& item = link_items[i];
+			std::cout << std::right << std::setw(max_width + 2)
+					  << (i + 1) << ". "
+					  << std::left << COLOR_BLUE << "Texto: " << COLOR_RESET
+					  << item.second << "\n";
+			std::cout << std::setw(max_width + 4) << " "
+					  << COLOR_CYAN << "Link: " << COLOR_RESET
+					  << "https://pt.wikipedia.org" << item.first << "\n";
+			std::cout << "\n";
+		}
+
+		if (link_items.size() > max_display) {
+			std::cout << COLOR_YELLOW << "... e mais "
+					  << (link_items.size() - max_display)
+					  << " links não exibidos." << COLOR_RESET << "\n";
+		}
+
+		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+
+		// Opção para acessar um link específico
+		std::cout << "  Digite o número de um link para acessá-lo (0 para voltar): ";
+
+		std::string input;
+		std::getline(std::cin, input);
+
+		if (!input.empty()) {
+			int choice = std::stoi(input);
+			if (choice > 0 && choice <= static_cast<int>(link_items.size())) {
+				// Acessar o link escolhido
+				std::string full_url = "https://pt.wikipedia.org" + link_items[choice-1].first;
+				display_success("Acessando: " + full_url);
+
+				// Obter o conteúdo do novo artigo
+				std::string new_content = fetch_url::fetch_url(full_url);
+				if (!new_content.empty()) {
+					display_success("Conteúdo HTML obtido com sucesso!");
+					// Loop do menu do artigo com o novo conteúdo
+					while (article_menu(new_content)) {
+						// Continua no menu do artigo
+					}
+				} else {
+					display_error("Falha ao obter o conteúdo HTML do link.");
+					wait_enter();
+				}
+			}
+		}
+	} else {
+		display_error("Nenhum link para outros artigos encontrado.");
+		wait_enter();
+	}
 }
 
 /**
@@ -298,19 +416,28 @@ bool article_menu(const std::string& html_content) {
 	}
 
 	CLEAR_SCREEN();
-	display_header("Artigo da Wikipedia");
+
+	// Extrai e exibe o título no cabeçalho
+	std::string title = regex_core::extract_wikipedia_title(html_content);
+	std::string decoded_title = decode_html(title);
+
+	if (decoded_title.empty()) {
+		decoded_title = "Artigo da Wikipedia";
+	}
+
+	display_header(decoded_title);
 
 	std::cout << COLOR_YELLOW << "Escolha uma opção:" << COLOR_RESET << '\n';
-	std::cout << "  1. Extrair título do artigo\n";
-	std::cout << "  2. Extrair sumário (TOC) do artigo\n";
-	std::cout << "  3. Listar imagens do artigo\n";
+	std::cout << "  1. Extrair sumário (TOC) do artigo\n";
+	std::cout << "  2. Listar imagens do artigo\n";
+	std::cout << "  3. Buscar links para outros artigos\n";
 	std::cout << "  4. Voltar ao menu principal\n";
 	std::cout << "Opção: ";
 
 	switch (get_choice(1, 4)) {
-		case 1: show_title(html_content); return true;
-		case 2: show_toc(html_content); return true;
-		case 3: show_images(html_content); return true;
+		case 1: show_toc(html_content); return true;
+		case 2: show_images(html_content); return true;
+		case 3: show_links(html_content); return true;
 		case 4: return false;
 		default:
 			display_error("Opção inválida. Tente novamente.");

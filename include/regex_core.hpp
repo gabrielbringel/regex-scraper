@@ -26,6 +26,14 @@ namespace regex_core {
 		"<img[^>]*src=\"([^\"]*)\"[^>]*(?:alt=\"([^\"]*)\")?[^>]*>"
 	);
 
+	// Regex corrigida para capturar links da Wikipedia em ambos os formatos:
+	// - href="/wiki/Nome"
+	// - href="//pt.wikipedia.org/wiki/Nome"
+	// - href="https://pt.wikipedia.org/wiki/Nome"
+	const std::regex WIKIPEDIA_LINK_REGEX(
+		"<a[^>]*href=\"(?:https?:)?(?:\\/\\/pt\\.wikipedia\\.org)?(\\/wiki\\/[^\"]+)\"[^>]*>([^<]*)</a>"
+	);
+
 	/**
 	 * Valida se a URL é da Wikipedia.
 	 *
@@ -65,4 +73,14 @@ namespace regex_core {
 	 * Retorna std::vector<std::pair<std::string, std::string>>: Um vetor de pares contendo a URL da imagem e o texto alternativo (alt), ou um vetor vazio se não for encontrado.
 	 */
 	std::vector<std::pair<std::string, std::string>> extract_wikipedia_images(const std::string& html_content);
+
+	/**
+	 * Extrai os links para outros artigos da Wikipedia a partir do conteúdo HTML.
+	 *
+	 * Parâmetros:
+	 * const std::string& html_content: O conteúdo HTML da página.
+	 *
+	 * Retorna std::vector<std::pair<std::string, std::string>>: Um vetor de pares contendo o caminho do link e o texto do link, ou um vetor vazio se não for encontrado.
+	 */
+	std::vector<std::pair<std::string, std::string>> extract_wikipedia_links(const std::string& html_content);
 }

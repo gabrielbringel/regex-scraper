@@ -6,6 +6,7 @@
 #include "regex_core.hpp"
 #include <iostream>
 #include <sstream>
+#include <set>
 
 /**
  * Valida se a URL é da Wikipedia.
@@ -110,12 +111,66 @@ std::vector<std::pair<std::string, std::string>> regex_core::extract_wikipedia_i
 			src = "https://pt.wikipedia.org" + src;
 		}
 
-		// Filtrar imagens muito pequenas ou ícones (opcional)
-		// Pode adicionar filtros aqui se necessário
-
 		image_items.push_back(std::make_pair(src, alt));
 		++iter;
 	}
 
 	return image_items;
+}
+
+/**
+ * Extrai os links para outros artigos da Wikipedia a partir do conteúdo HTML.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML da página.
+ *
+ * Retorna std::vector<std::pair<std::string, std::string>>: Um vetor de pares contendo o caminho do link e o texto do link, ou um vetor vazio se não for encontrado.
+ */
+std::vector<std::pair<std::string, std::string>> regex_core::extract_wikipedia_links(const std::string& html_content) {
+	std::vector<std::pair<std::string, std::string>> link_items;
+	std::set<std::string> unique_links; // Para evitar duplicatas
+
+	// Criar um iterador para percorrer todas as ocorrências
+	std::sregex_iterator iter(html_content.begin(), html_content.end(), WIKIPEDIA_LINK_REGEX);
+	std::sregex_iterator end;
+
+	// Iterar sobre todas as correspondências encontradas
+	while (iter != end) {
+		std::smatch match = *iter;
+
+		// match[1] contém o caminho do link (/wiki/...)
+		// match[2] contém o texto do link
+		std::string href = match[1].str();
+		std::string text = match[2].str();
+
+		// Limpar espaços em branco extras
+		href = std::regex_replace(href, std::regex(R"(^\s+|\s+$)"), "");
+		text = std::regex_replace(text, std::regex(R"(^\s+|\s+$)"), "");
+
+		// Filtrar links que não são artigos (ex: /wiki/Ficheiro:, /wiki/Categoria:, etc.)
+		if (href.find("/wiki/Ficheiro:") == 0 ||
+		    href.find("/wiki/Categoria:") == 0 ||
+		    href.find("/wiki/Ajuda:") == 0 ||
+		    href.find("/wiki/Portal:") == 0 ||
+		    href.find("/wiki/Predefinição:") == 0 ||
+		    href.find("/wiki/Wikipédia:") == 0 ||
+		    href.find("/wiki/Especial:") == 0 ||
+		    href.find("/wiki/Utilizador:") == 0 ||
+		    href.find("/wiki/Discussão:") == 0 ||
+		    href.find("#") != std::string::npos ||
+		    href.find("File:") != std::string::npos ||
+		    href.find("Ficheiro:") != std::string::npos) {
+			++iter;
+			continue;
+		}
+
+		// Verificar se o link já foi adicionado
+		if (unique_links.insert(href).second) {
+			link_items.push_back(std::make_pair(href, text));
+		}
+
+		++iter;
+	}
+
+	return link_items;
 }
