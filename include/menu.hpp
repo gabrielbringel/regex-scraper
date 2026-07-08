@@ -101,6 +101,14 @@ void show_title(const std::string& html_content);
 void show_toc(const std::string& html_content);
 
 /**
+ * Exibe as imagens de um artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_images(const std::string& html_content);
+
+/**
  * Exibe e processa o menu do artigo da Wikipedia.
  *
  * Parâmetros:

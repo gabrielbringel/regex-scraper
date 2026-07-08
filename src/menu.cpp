@@ -27,6 +27,7 @@
 #define COLOR_YELLOW  "\033[33m"
 #define COLOR_GREEN   "\033[32m"
 #define COLOR_RED     "\033[31m"
+#define COLOR_MAGENTA "\033[35m"
 
 /**
  * Decodifica uma string HTML, substituindo entidades HTML por seus caracteres correspondentes.
@@ -226,6 +227,62 @@ void show_toc(const std::string& html_content) {
 }
 
 /**
+ * Exibe as imagens de um artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_images(const std::string& html_content) {
+	auto image_items = regex_core::extract_wikipedia_images(html_content);
+
+	// Decodifica os textos alternativos
+	for (auto& item : image_items)
+		item.second = decode_html(item.second);
+
+	if (!image_items.empty()) {
+		CLEAR_SCREEN();
+		display_header("Imagens do Artigo");
+
+		// Limitar a exibição para não sobrecarregar
+		size_t max_display = std::min(image_items.size(), size_t(20));
+
+		std::cout << COLOR_YELLOW << "Total de imagens encontradas: " << image_items.size() << COLOR_RESET << "\n\n";
+
+		// Calcula largura máxima para alinhamento
+		size_t max_width = 0;
+		for (size_t i = 0; i < max_display; ++i)
+			max_width = std::max(max_width, std::to_string(i + 1).length());
+
+		// Exibe itens formatados
+		for (size_t i = 0; i < max_display; ++i) {
+			const auto& item = image_items[i];
+			std::cout << std::right << std::setw(max_width + 2)
+					  << (i + 1) << ". "
+					  << std::left << COLOR_CYAN << "URL: " << COLOR_RESET
+					  << item.first << "\n";
+			if (!item.second.empty()) {
+				std::cout << std::setw(max_width + 4) << " "
+						  << COLOR_MAGENTA << "Alt: " << COLOR_RESET
+						  << item.second << "\n";
+			}
+			std::cout << "\n";
+		}
+
+		if (image_items.size() > max_display) {
+			std::cout << COLOR_YELLOW << "... e mais "
+					  << (image_items.size() - max_display)
+					  << " imagens não exibidas." << COLOR_RESET << "\n";
+		}
+
+		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+	} else {
+		display_error("Nenhuma imagem encontrada no artigo.");
+	}
+
+	wait_enter();
+}
+
+/**
  * Exibe e processa o menu do artigo da Wikipedia.
  *
  * Parâmetros:
@@ -246,13 +303,15 @@ bool article_menu(const std::string& html_content) {
 	std::cout << COLOR_YELLOW << "Escolha uma opção:" << COLOR_RESET << '\n';
 	std::cout << "  1. Extrair título do artigo\n";
 	std::cout << "  2. Extrair sumário (TOC) do artigo\n";
-	std::cout << "  3. Voltar ao menu principal\n";
+	std::cout << "  3. Listar imagens do artigo\n";
+	std::cout << "  4. Voltar ao menu principal\n";
 	std::cout << "Opção: ";
 
-	switch (get_choice(1, 3)) {
+	switch (get_choice(1, 4)) {
 		case 1: show_title(html_content); return true;
 		case 2: show_toc(html_content); return true;
-		case 3: return false;
+		case 3: show_images(html_content); return true;
+		case 4: return false;
 		default:
 			display_error("Opção inválida. Tente novamente.");
 			clear_input();

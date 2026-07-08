@@ -22,6 +22,10 @@ namespace regex_core {
 
 	const std::regex WIKIPEDIA_TOC_REGEX(R"(<div[^>]*class="[^"]*vector-toc-text[^"]*"[^>]*>[\s\S]*?(?:<a[^>]*>)?\s*<span[^>]*class="[^"]*vector-toc-numb[^"]*"[^>]*>([^<]*)</span>\s*<span>([^<]+)</span>)");
 
+	const std::regex WIKIPEDIA_IMAGE_REGEX(
+		"<img[^>]*src=\"([^\"]*)\"[^>]*(?:alt=\"([^\"]*)\")?[^>]*>"
+	);
+
 	/**
 	 * Valida se a URL é da Wikipedia.
 	 *
@@ -52,4 +56,13 @@ namespace regex_core {
 	 */
 	std::vector<std::pair<std::string, std::string>> extract_wikipedia_toc(const std::string& html_content);
 
+	/**
+	 * Extrai as imagens da página da Wikipedia a partir do conteúdo HTML.
+	 *
+	 * Parâmetros:
+	 * const std::string& html_content: O conteúdo HTML da página.
+	 *
+	 * Retorna std::vector<std::pair<std::string, std::string>>: Um vetor de pares contendo a URL da imagem e o texto alternativo (alt), ou um vetor vazio se não for encontrado.
+	 */
+	std::vector<std::pair<std::string, std::string>> extract_wikipedia_images(const std::string& html_content);
 }

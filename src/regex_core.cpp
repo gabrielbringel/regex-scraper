@@ -74,3 +74,48 @@ std::vector<std::pair<std::string, std::string>> regex_core::extract_wikipedia_t
 
 	return toc_items;
 }
+
+/**
+ * Extrai as imagens da página da Wikipedia a partir do conteúdo HTML.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML da página.
+ *
+ * Retorna std::vector<std::pair<std::string, std::string>>: Um vetor de pares contendo a URL da imagem e o texto alternativo (alt), ou um vetor vazio se não for encontrado.
+ */
+std::vector<std::pair<std::string, std::string>> regex_core::extract_wikipedia_images(const std::string& html_content) {
+	std::vector<std::pair<std::string, std::string>> image_items;
+
+	// Criar um iterador para percorrer todas as ocorrências
+	std::sregex_iterator iter(html_content.begin(), html_content.end(), WIKIPEDIA_IMAGE_REGEX);
+	std::sregex_iterator end;
+
+	// Iterar sobre todas as correspondências encontradas
+	while (iter != end) {
+		std::smatch match = *iter;
+
+		// match[1] contém a URL da imagem
+		// match[2] contém o texto alternativo (alt) da imagem (opcional)
+		std::string src = match[1].str();
+		std::string alt = match[2].str();
+
+		// Limpar espaços em branco extras
+		src = std::regex_replace(src, std::regex(R"(^\s+|\s+$)"), "");
+		alt = std::regex_replace(alt, std::regex(R"(^\s+|\s+$)"), "");
+
+		// Corrigir URLs relativas para URLs absolutas da Wikipedia
+		if (src.find("//") == 0) {
+			src = "https:" + src;
+		} else if (src.find("/") == 0) {
+			src = "https://pt.wikipedia.org" + src;
+		}
+
+		// Filtrar imagens muito pequenas ou ícones (opcional)
+		// Pode adicionar filtros aqui se necessário
+
+		image_items.push_back(std::make_pair(src, alt));
+		++iter;
+	}
+
+	return image_items;
+}
