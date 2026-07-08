@@ -45,8 +45,15 @@ run-local: build-local ## Executa o projeto localmente
 	@./$(BINARY) $(ARGS)
 
 .PHONY: run-docker
-run-docker: build-docker ## Executa o projeto usando Docker
+run-docker: ## Executa o projeto usando Docker (usa imagem existente ou constrói se não existir)
 	@printf "$(BLUE)Executando $(PROJECT_NAME) no Docker...$(NC)\n"
+	@if docker image inspect $(DOCKER_IMAGE) >/dev/null 2>&1; then \
+		printf "$(GREEN)Usando imagem existente: $(DOCKER_IMAGE)$(NC)\n"; \
+	else \
+		printf "$(YELLOW)Imagem não encontrada. Construindo...$(NC)\n"; \
+		docker build -t $(DOCKER_IMAGE) .; \
+		printf "$(GREEN)Imagem construída com sucesso!$(NC)\n"; \
+	fi
 	@docker run --rm -it \
 		--name $(DOCKER_CONTAINER) \
 		$(DOCKER_IMAGE) $(ARGS)
