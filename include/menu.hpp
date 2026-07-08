@@ -11,57 +11,120 @@
 #include <utility>
 
 /**
- * Exibe o menu principal do programa.
- */
-void display_menu(void);
-
-/**
- * Obtém a escolha do usuário no menu principal.
+ * Decodifica uma string HTML, substituindo entidades HTML por seus caracteres correspondentes.
  *
- * Retorna int: A escolha do usuário como um número inteiro. Retorna -1 se a entrada for inválida.
+ * Parâmetros:
+ * const std::string& html: A string HTML a ser decodificada.
+ *
+ * Retorna std::string: A string decodificada.
  */
-int get_user_choice(void);
+std::string decode_html(const std::string& html);
 
 /**
- * Loop principal do programa, que exibe o menu e processa a escolha do usuário.
+ * Exibe um cabeçalho estilizado para uma janela.
+ *
+ * Parâmetros:
+ * const std::string& title: O título do cabeçalho.
+ */
+void display_header(const std::string& title);
+
+/**
+ * Exibe uma mensagem formatada com cor opcional.
+ *
+ * Parâmetros:
+ * const std::string& msg: A mensagem a ser exibida.
+ * const std::string& color: O código de cor ANSI (opcional).
+ */
+void display_msg(const std::string& msg, const std::string& color = "");
+
+/**
+ * Exibe uma mensagem de erro.
+ *
+ * Parâmetros:
+ * const std::string& msg: A mensagem de erro.
+ */
+void display_error(const std::string& msg);
+
+/**
+ * Exibe uma mensagem de sucesso.
+ *
+ * Parâmetros:
+ * const std::string& msg: A mensagem de sucesso.
+ */
+void display_success(const std::string& msg);
+
+/**
+ * Limpa o buffer de entrada.
+ */
+void clear_input(void);
+
+/**
+ * Obtém uma escolha numérica do usuário dentro de um intervalo.
+ *
+ * Parâmetros:
+ * int min: O valor mínimo permitido.
+ * int max: O valor máximo permitido.
+ *
+ * Retorna int: A escolha do usuário. Retorna -1 se a entrada for inválida.
+ */
+int get_choice(int min, int max);
+
+/**
+ * Aguarda o usuário pressionar Enter para continuar.
+ */
+void wait_enter(void);
+
+/**
+ * Remove espaços em branco das extremidades de uma string.
+ *
+ * Parâmetros:
+ * const std::string& str: A string a ser processada.
+ *
+ * Retorna std::string: A string sem espaços nas extremidades.
+ */
+std::string trim(const std::string& str);
+
+/**
+ * Exibe o título de um artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_title(const std::string& html_content);
+
+/**
+ * Exibe o sumário (TOC) de um artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_toc(const std::string& html_content);
+
+/**
+ * Exibe e processa o menu do artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ *
+ * Retorna bool: true se deve continuar no menu do artigo, false se deve voltar.
+ */
+bool article_menu(const std::string& html_content);
+
+/**
+ * Processa a entrada da URL pelo usuário e gerencia o fluxo do artigo.
+ */
+void handle_url_input(void);
+
+/**
+ * Exibe e processa o menu principal do programa.
+ *
+ * Retorna bool: true se deve continuar no menu principal, false se deve sair.
+ */
+bool main_menu(void);
+
+/**
+ * Loop principal do programa.
  */
 void main_loop(void);
-
-/**
- * Exibe o menu de opções para um dado artigo da Wikipedia.
- */
-void display_article_menu(void);
-
-/**
- * Obtém a escolha do usuário no menu de opções do artigo.
- *
- * Retorna int: A escolha do usuário como um número inteiro. Retorna -1 se a entrada for inválida.
- */
-int get_article_choice(void);
-
-/**
- * Loop para processar o conteúdo HTML de um artigo da Wikipedia.
- *
- * Parâmetros:
- * const std::string& html_content: O conteúdo HTML do artigo da Wikipedia.
- */
-void article_loop(const std::string& html_content);
-
-/**
- * Exibe o título do artigo da Wikipedia.
- *
- * Parâmetros:
- * const std::string& title: O título do artigo.
- */
-void display_article_title(const std::string& title);
-
-/**
- * Exibe o sumário (TOC) do artigo da Wikipedia.
- *
- * Parâmetros:
- * const std::vector<std::pair<std::string, std::string>>& toc_items: Um vetor de pares contendo os itens do sumário,
- * onde cada par consiste em um número de seção e o texto do título.
- */
-void display_toc(const std::vector<std::pair<std::string, std::string>>& toc_items);
 
 #endif

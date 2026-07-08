@@ -10,204 +10,318 @@
 #include <limits>
 #include <string>
 #include <iomanip>
+#include <vector>
+#include <algorithm>
+
+#ifdef _WIN32
+	#include <cstdlib>
+	static inline void CLEAR_SCREEN() { int drop = system("cls"); (void)drop; }
+#else
+	#include <cstdlib>
+	static inline void CLEAR_SCREEN() { int drop = system("clear"); (void)drop; }
+#endif
+
+#define COLOR_RESET   "\033[0m"
+#define COLOR_BOLD    "\033[1m"
+#define COLOR_CYAN    "\033[36m"
+#define COLOR_YELLOW  "\033[33m"
+#define COLOR_GREEN   "\033[32m"
+#define COLOR_RED     "\033[31m"
 
 /**
- * Exibe o menu principal do programa.
- */
-void display_menu(void) {
-	std::cout << "==============================" << std::endl;
-	std::cout << "       Regex Scraper          " << std::endl;
-	std::cout << "==============================\n\n" << std::endl;
-}
-
-/**
- * Obtém a escolha do usuário no menu principal.
- *
- * Retorna int: A escolha do usuário como um número inteiro. Retorna -1 se a entrada for inválida.
- */
-int get_user_choice(void) {
-	std::string input;
-	std::cout << "Escolha uma opção:" << std::endl;
-	std::cout << "1. Buscar URL" << std::endl;
-	std::cout << "2. Sair" << std::endl;
-	std::cout << "Opção: ";
-
-	std::getline(std::cin, input);
-
-	if (input.empty() || input.length() > 1) {
-		return -1;
-	}
-
-	if (input[0] < '1' || input[0] > '2') {
-		return -1;
-	}
-
-	return input[0] - '0';
-}
-
-/**
- * Loop principal do programa, que exibe o menu e processa a escolha do usuário.
- */
-void main_loop(void) {
-	while (true) {
-		display_menu();
-		int choice = get_user_choice();
-
-		switch (choice) {
-			case 1: {
-				std::string url;
-				std::cout << "Digite a URL: ";
-				std::getline(std::cin, url);
-
-				// Remover espaços em branco do início e fim
-				size_t start = url.find_first_not_of(" \t\n\r");
-				if (start != std::string::npos) {
-					url = url.substr(start);
-				}
-
-				size_t end = url.find_last_not_of(" \t\n\r");
-				if (end != std::string::npos) {
-					url = url.substr(0, end + 1);
-				}
-
-				if (regex_core::is_wikipedia_url(url)) {
-					std::string html_content = fetch_url::fetch_url(url);
-					if (!html_content.empty()) {
-						std::cout << "Conteúdo HTML obtido com sucesso!" << std::endl;
-						article_loop(html_content);
-					} else {
-						std::cout << "Falha ao obter o conteúdo HTML da URL." << std::endl;
-					}
-				} else {
-					std::cout << "A URL fornecida não é uma URL válida da Wikipedia." << std::endl;
-				}
-				break;
-			}
-			case 2:
-				std::cout << "Saindo do programa..." << std::endl;
-				return;
-			default:
-				std::cout << "Opção inválida. Tente novamente." << std::endl;
-				std::cin.clear();
-				std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-		}
-	}
-}
-
-/**
- * Exibe o menu de opções para um dado artigo da Wikipedia.
- */
-void display_article_menu(void) {
-	std::cout << "\n\n==============================" << std::endl;
-	std::cout << "       Artigo da Wikipedia     " << std::endl;
-	std::cout << "==============================\n\n" << std::endl;
-}
-
-/**
- * Obtém a escolha do usuário no menu de opções do artigo.
- *
- * Retorna int: A escolha do usuário como um número inteiro. Retorna -1 se a entrada for inválida.
- */
-int get_article_choice(void) {
-	std::string input;
-	std::cout << "Escolha uma opção:" << std::endl;
-	std::cout << "1. Extrair título do artigo" << std::endl;
-	std::cout << "2. Extrair sumário (TOC) do artigo" << std::endl;
-	std::cout << "3. Voltar ao menu principal" << std::endl;
-	std::cout << "Opção: ";
-
-	std::getline(std::cin, input);
-
-	if (input.empty() || input.length() > 1) {
-		return -1;
-	}
-
-	if (input[0] < '1' || input[0] > '3') {
-		return -1;
-	}
-
-	return input[0] - '0';
-}
-
-/**
- * Loop para processar o conteúdo HTML de um artigo da Wikipedia.
+ * Decodifica uma string HTML, substituindo entidades HTML por seus caracteres correspondentes.
  *
  * Parâmetros:
- * const std::string& html_content: O conteúdo HTML do artigo da Wikipedia.
+ * const std::string& html: A string HTML a ser decodificada.
+ *
+ * Retorna std::string: A string decodificada.
  */
-void article_loop(const std::string& html_content) {
-	while (true) {
-		display_article_menu();
-		int choice = get_article_choice();
+std::string decode_html(const std::string& html) {
+	std::string decoded;
+	decoded.reserve(html.size());
 
-		switch (choice) {
-			case 1: {
-				std::string title = regex_core::extract_wikipedia_title(html_content);
-				display_article_title(title);
-				break;
+	for (size_t i = 0; i < html.size(); ++i) {
+		if (html[i] == '&') {
+			if (html.compare(i, 5, "&amp;") == 0) {
+				decoded += '&';
+				i += 4;
+			} else if (html.compare(i, 4, "&lt;") == 0) {
+				decoded += '<';
+				i += 3;
+			} else if (html.compare(i, 4, "&gt;") == 0) {
+				decoded += '>';
+				i += 3;
+			} else if (html.compare(i, 6, "&quot;") == 0) {
+				decoded += '"';
+				i += 5;
+			} else if (html.compare(i, 6, "&apos;") == 0) {
+				decoded += '\'';
+				i += 5;
+			} else {
+				decoded += '&';
 			}
-			case 2: {
-				std::vector<std::pair<std::string, std::string>> toc_items =
-					regex_core::extract_wikipedia_toc(html_content);
-				display_toc(toc_items);
-				break;
-			}
-			case 3:
-				return;
-			default:
-				std::cout << "Opção inválida. Tente novamente." << std::endl;
+		} else {
+			decoded += html[i];
 		}
 	}
+
+	return decoded;
 }
 
 /**
- * Exibe o título do artigo da Wikipedia.
+ * Exibe um cabeçalho estilizado para uma janela.
  *
  * Parâmetros:
- * const std::string& title: O título do artigo.
+ * const std::string& title: O título do cabeçalho.
  */
-void display_article_title(const std::string& title) {
-	if (!title.empty()) {
-		std::cout << "\n==============================" << std::endl;
-		std::cout << "         Título do Artigo      " << std::endl;
-		std::cout << "==============================" << std::endl;
-		std::cout << title << std::endl;
-		std::cout << "==============================\n" << std::endl;
+void display_header(const std::string& title) {
+	std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << '\n';
+	std::cout << COLOR_BOLD << "       " << title << "          " << COLOR_RESET << '\n';
+	std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n\n";
+}
+
+/**
+ * Exibe uma mensagem formatada com cor opcional.
+ *
+ * Parâmetros:
+ * const std::string& msg: A mensagem a ser exibida.
+ * const std::string& color: O código de cor ANSI (opcional).
+ */
+void display_msg(const std::string& msg, const std::string& color) {
+	if (!color.empty())
+		std::cout << color;
+	std::cout << msg << COLOR_RESET << '\n';
+}
+
+/**
+ * Exibe uma mensagem de erro.
+ *
+ * Parâmetros:
+ * const std::string& msg: A mensagem de erro.
+ */
+void display_error(const std::string& msg) {
+	display_msg("[ERRO] " + msg, COLOR_RED);
+}
+
+/**
+ * Exibe uma mensagem de sucesso.
+ *
+ * Parâmetros:
+ * const std::string& msg: A mensagem de sucesso.
+ */
+void display_success(const std::string& msg) {
+	display_msg("[OK] " + msg, COLOR_GREEN);
+}
+
+/**
+ * Limpa o buffer de entrada.
+ */
+void clear_input() {
+	std::cin.clear();
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+/**
+ * Obtém uma escolha numérica do usuário dentro de um intervalo.
+ *
+ * Parâmetros:
+ * int min: O valor mínimo permitido.
+ * int max: O valor máximo permitido.
+ *
+ * Retorna int: A escolha do usuário. Retorna -1 se a entrada for inválida.
+ */
+int get_choice(int min, int max) {
+	std::string input;
+	std::getline(std::cin, input);
+
+	if (input.empty() || input.length() > 1)
+		return -1;
+
+	int choice = input[0] - '0';
+	return (choice >= min && choice <= max) ? choice : -1;
+}
+
+/**
+ * Aguarda o usuário pressionar Enter para continuar.
+ */
+void wait_enter() {
+	std::cout << "\nPressione Enter para continuar...";
+	std::cin.get();
+}
+
+/**
+ * Remove espaços em branco das extremidades de uma string.
+ *
+ * Parâmetros:
+ * const std::string& str: A string a ser processada.
+ *
+ * Retorna std::string: A string sem espaços nas extremidades.
+ */
+std::string trim(const std::string& str) {
+	size_t start = str.find_first_not_of(" \t\n\r");
+	if (start == std::string::npos)
+		return "";
+
+	size_t end = str.find_last_not_of(" \t\n\r");
+	return str.substr(start, end - start + 1);
+}
+
+/**
+ * Exibe o título de um artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_title(const std::string& html_content) {
+	std::string title = regex_core::extract_wikipedia_title(html_content);
+	std::string decoded = decode_html(title);
+
+	if (!decoded.empty()) {
+		CLEAR_SCREEN();
+		display_header("Título do Artigo");
+		std::cout << COLOR_BOLD << decoded << COLOR_RESET << "\n";
+		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
 	} else {
-		std::cout << "Falha ao extrair o título do artigo." << std::endl;
+		display_error("Falha ao extrair o título do artigo.");
+	}
+
+	wait_enter();
+}
+
+/**
+ * Exibe o sumário (TOC) de um artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ */
+void show_toc(const std::string& html_content) {
+	auto toc_items = regex_core::extract_wikipedia_toc(html_content);
+
+	// Decodifica os títulos
+	for (auto& item : toc_items)
+		item.second = decode_html(item.second);
+
+	if (!toc_items.empty()) {
+		CLEAR_SCREEN();
+		display_header("Sumário do Artigo");
+
+		// Calcula largura máxima para alinhamento
+		size_t max_width = 0;
+		for (const auto& item : toc_items)
+			max_width = std::max(max_width, item.first.length());
+
+		// Exibe itens formatados
+		for (const auto& item : toc_items) {
+			std::cout << std::right << std::setw(max_width + 2)
+					  << item.first << "  "
+					  << std::left << item.second << '\n';
+		}
+
+		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+	} else {
+		display_error("Nenhum item de sumário encontrado.");
+	}
+
+	wait_enter();
+}
+
+/**
+ * Exibe e processa o menu do artigo da Wikipedia.
+ *
+ * Parâmetros:
+ * const std::string& html_content: O conteúdo HTML do artigo.
+ *
+ * Retorna bool: true se deve continuar no menu do artigo, false se deve voltar.
+ */
+bool article_menu(const std::string& html_content) {
+	if (html_content.empty()) {
+		display_error("Nenhum conteúdo de artigo disponível.");
+		wait_enter();
+		return false;
+	}
+
+	CLEAR_SCREEN();
+	display_header("Artigo da Wikipedia");
+
+	std::cout << COLOR_YELLOW << "Escolha uma opção:" << COLOR_RESET << '\n';
+	std::cout << "  1. Extrair título do artigo\n";
+	std::cout << "  2. Extrair sumário (TOC) do artigo\n";
+	std::cout << "  3. Voltar ao menu principal\n";
+	std::cout << "Opção: ";
+
+	switch (get_choice(1, 3)) {
+		case 1: show_title(html_content); return true;
+		case 2: show_toc(html_content); return true;
+		case 3: return false;
+		default:
+			display_error("Opção inválida. Tente novamente.");
+			clear_input();
+			return true;
 	}
 }
 
 /**
- * Exibe o sumário (TOC) do artigo da Wikipedia.
- *
- * Parâmetros:
- * const std::vector<std::pair<std::string, std::string>>& toc_items: Um vetor de pares contendo os itens do sumário,
- * onde cada par consiste em um número de seção e o texto do título.
+ * Processa a entrada da URL pelo usuário e gerencia o fluxo do artigo.
  */
-void display_toc(const std::vector<std::pair<std::string, std::string>>& toc_items) {
-	if (toc_items.empty()) {
-		std::cout << "Nenhum item de sumário encontrado." << std::endl;
-		return;
+void handle_url_input() {
+	std::cout << "Digite a URL: ";
+	std::string url;
+	std::getline(std::cin, url);
+
+	url = trim(url);
+
+	if (regex_core::is_wikipedia_url(url)) {
+		std::string content = fetch_url::fetch_url(url);
+		if (!content.empty()) {
+			display_success("Conteúdo HTML obtido com sucesso!");
+
+			// Loop do menu do artigo
+			while (article_menu(content)) {
+				// Continua no menu do artigo
+			}
+		} else {
+			display_error("Falha ao obter o conteúdo HTML da URL.");
+		}
+	} else {
+		display_error("A URL fornecida não é uma URL válida da Wikipedia.");
 	}
 
-	std::cout << "\n==============================" << std::endl;
-	std::cout << "       Sumário do Artigo       " << std::endl;
-	std::cout << "==============================" << std::endl;
+	wait_enter();
+}
 
-	// Encontrar o tamanho máximo do número para alinhamento
-	size_t max_number_width = 0;
-	for (const auto& item : toc_items) {
-		max_number_width = std::max(max_number_width, item.first.length());
+/**
+ * Exibe e processa o menu principal do programa.
+ *
+ * Retorna bool: true se deve continuar no menu principal, false se deve sair.
+ */
+bool main_menu() {
+	CLEAR_SCREEN();
+	display_header("Regex Scraper");
+
+	std::cout << COLOR_YELLOW << "Escolha uma opção:" << COLOR_RESET << '\n';
+	std::cout << "  1. Buscar URL\n";
+	std::cout << "  2. Sair\n";
+	std::cout << "Opção: ";
+
+	switch (get_choice(1, 2)) {
+		case 1:
+			handle_url_input();
+			return true;
+		case 2:
+			display_msg("Saindo do programa...");
+			return false;
+		default:
+			display_error("Opção inválida. Tente novamente.");
+			clear_input();
+			return true;
 	}
+}
 
-	// Exibir cada item com formatação consistente
-	for (const auto& item : toc_items) {
-		// Alinhar o número à direita e o título à esquerda
-		std::cout << std::right << std::setw(max_number_width + 2)
-				  << item.first << "  "
-				  << std::left << item.second << std::endl;
+/**
+ * Loop principal do programa.
+ */
+void main_loop() {
+	while (main_menu()) {
+		// Continua no menu principal
 	}
-
-	std::cout << "==============================\n" << std::endl;
 }
