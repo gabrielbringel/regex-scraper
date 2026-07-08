@@ -1,0 +1,40 @@
+# ==============================
+# build dir
+# ==============================
+build/
+
+# ==============================
+# IDE and editor files
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==============================
+# OS generated files
+# ==============================
+.DS_Store
+Thumbs.db
+
+# ==============================
+# Compiled output
+# ==============================
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.dll
+regex_scraper
+
+# ==============================
+# CMake generated files
+# ==============================
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
