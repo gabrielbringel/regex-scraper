@@ -31,6 +31,62 @@
 #define COLOR_BLUE    "\033[34m"
 
 /**
+ * Verifica se o programa está sendo executado dentro de um contêiner Docker.
+ *
+ * Retorna bool: true se estiver em Docker, false caso contrário.
+ */
+static bool is_running_in_docker() {
+	const char* in_docker = std::getenv("IN_DOCKER");
+	return in_docker && std::string(in_docker) == "true";
+}
+
+/**
+ * Abre uma URL no navegador padrão
+ */
+static bool open_url_in_browser(const std::string& url) {
+	// Se estiver em Docker, não tenta abrir
+	if (is_running_in_docker()) {
+		std::cout << COLOR_YELLOW
+				  << "  [Docker] Para abrir esta imagem, copie a URL abaixo no seu navegador:\n"
+				  << COLOR_CYAN << "  " << url << COLOR_RESET << "\n";
+		return false;
+	}
+
+	std::string cmd;
+	#ifdef _WIN32
+		cmd = "start " + url;
+	#elif __APPLE__
+		cmd = "open " + url;
+	#else
+		cmd = "xdg-open " + url;
+	#endif
+
+	int result = system(cmd.c_str());
+	if (result != 0) {
+		// Se xdg-open falhar, tenta com outros navegadores
+		std::vector<std::string> browsers = {
+			"google-chrome", "firefox", "chromium-browser", "brave-browser"
+		};
+
+		for (const auto& browser : browsers) {
+			cmd = browser + " " + url;
+			result = system(cmd.c_str());
+			if (result == 0) {
+				return true;
+			}
+		}
+
+		// Se todos falharem, mostra a URL
+		std::cout << COLOR_YELLOW
+				  << "  Não foi possível abrir o navegador. Copie a URL abaixo:\n"
+				  << COLOR_CYAN << "  " << url << COLOR_RESET << "\n";
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * Decodifica uma string HTML, substituindo entidades HTML por seus caracteres correspondentes.
  *
  * Parâmetros:
@@ -77,9 +133,9 @@ std::string decode_html(const std::string& html) {
  * const std::string& title: O título do cabeçalho.
  */
 void display_header(const std::string& title) {
-	std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << '\n';
-	std::cout << COLOR_BOLD << "       " << title << "          " << COLOR_RESET << '\n';
-	std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n\n";
+	std::cout << COLOR_CYAN << "===================================================" << COLOR_RESET << '\n';
+	std::cout << COLOR_BOLD << "  " << title << COLOR_RESET << '\n';
+	std::cout << COLOR_CYAN << "===================================================" << COLOR_RESET << "\n\n";
 }
 
 /**
@@ -181,8 +237,8 @@ void show_title(const std::string& html_content) {
 	if (!decoded.empty()) {
 		CLEAR_SCREEN();
 		display_header("Título do Artigo");
-		std::cout << COLOR_BOLD << decoded << COLOR_RESET << "\n";
-		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+		std::cout << COLOR_BOLD << "  " << decoded << COLOR_RESET << "\n";
+		std::cout << COLOR_CYAN << "===================================================" << COLOR_RESET << "\n";
 	} else {
 		display_error("Falha ao extrair o título do artigo.");
 	}
@@ -219,7 +275,7 @@ void show_toc(const std::string& html_content) {
 					  << std::left << item.second << '\n';
 		}
 
-		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+		std::cout << COLOR_CYAN << "===================================================" << COLOR_RESET << "\n";
 	} else {
 		display_error("Nenhum item de sumário encontrado.");
 	}
@@ -247,7 +303,7 @@ void show_images(const std::string& html_content) {
 		// Limitar a exibição para não sobrecarregar
 		size_t max_display = std::min(image_items.size(), size_t(20));
 
-		std::cout << COLOR_YELLOW << "Total de imagens encontradas: " << image_items.size() << COLOR_RESET << "\n\n";
+		std::cout << COLOR_YELLOW << "  Total de imagens encontradas: " << image_items.size() << COLOR_RESET << "\n\n";
 
 		// Calcula largura máxima para alinhamento
 		size_t max_width = 0;
@@ -270,15 +326,20 @@ void show_images(const std::string& html_content) {
 		}
 
 		if (image_items.size() > max_display) {
-			std::cout << COLOR_YELLOW << "... e mais "
+			std::cout << COLOR_YELLOW << "  ... e mais "
 					  << (image_items.size() - max_display)
 					  << " imagens não exibidas." << COLOR_RESET << "\n";
 		}
 
-		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+		std::cout << COLOR_CYAN << "===================================================" << COLOR_RESET << "\n";
 
-		// Opção para acessar uma imagem específica
-		std::cout << "  Digite o número de uma imagem para abrir no navegador (0 para voltar): ";
+		// Verifica se está em Docker para ajustar a mensagem
+		if (is_running_in_docker()) {
+			std::cout << COLOR_YELLOW << "  [Modo Docker] As URLs serão exibidas para copiar e colar no navegador.\n";
+			std::cout << COLOR_YELLOW << "  Digite o número de uma imagem para ver a URL (0 para voltar): " << COLOR_RESET;
+		} else {
+			std::cout << "  Digite o número de uma imagem para abrir no navegador (0 para voltar): ";
+		}
 
 		std::string input;
 		std::getline(std::cin, input);
@@ -286,24 +347,19 @@ void show_images(const std::string& html_content) {
 		if (!input.empty()) {
 			int choice = std::stoi(input);
 			if (choice > 0 && choice <= static_cast<int>(image_items.size())) {
-				// Abrir a imagem escolhida no navegador
+				// Abrir a imagem escolhida
 				std::string image_url = image_items[choice-1].first;
-				display_success("Abrindo imagem: " + image_url);
 
-				// Comando para abrir URL no navegador padrão
-				#ifdef _WIN32
-					std::string cmd = "start " + image_url;
-				#elif __APPLE__
-					std::string cmd = "open " + image_url;
-				#else
-					std::string cmd = "xdg-open " + image_url;
-				#endif
-
-				int result = system(cmd.c_str());
-				if (result != 0) {
-					display_error("Falha ao abrir a imagem no navegador.");
+				if (is_running_in_docker()) {
+					/// Em Docker: mostra a URL com alinhamento
+					std::cout << "\n";
+					display_success("URL da imagem:");
+					std::cout << std::left << std::setw(4) << " "
+						<< COLOR_CYAN << image_url << COLOR_RESET << "\n";
 				} else {
-					display_success("Imagem aberta no navegador.");
+					// Fora do Docker: tenta abrir no navegador
+					display_success("Abrindo imagem: " + image_url);
+					open_url_in_browser(image_url);
 				}
 				wait_enter();
 			} else if (choice == 0) {
@@ -339,7 +395,7 @@ void show_links(const std::string& html_content) {
 		// Limitar a exibição para não sobrecarregar
 		size_t max_display = std::min(link_items.size(), size_t(30));
 
-		std::cout << COLOR_YELLOW << "Total de links encontrados: " << link_items.size() << COLOR_RESET << "\n\n";
+		std::cout << COLOR_YELLOW << "  Total de links encontrados: " << link_items.size() << COLOR_RESET << "\n\n";
 
 		// Calcula largura máxima para alinhamento
 		size_t max_width = 0;
@@ -360,12 +416,12 @@ void show_links(const std::string& html_content) {
 		}
 
 		if (link_items.size() > max_display) {
-			std::cout << COLOR_YELLOW << "... e mais "
+			std::cout << COLOR_YELLOW << "  ... e mais "
 					  << (link_items.size() - max_display)
 					  << " links não exibidos." << COLOR_RESET << "\n";
 		}
 
-		std::cout << COLOR_CYAN << "==============================" << COLOR_RESET << "\n";
+		std::cout << COLOR_CYAN << "===================================================" << COLOR_RESET << "\n";
 
 		// Opção para acessar um link específico
 		std::cout << "  Digite o número de um link para acessá-lo (0 para voltar): ";
@@ -427,12 +483,12 @@ bool article_menu(const std::string& html_content) {
 
 	display_header(decoded_title);
 
-	std::cout << COLOR_YELLOW << "Escolha uma opção:" << COLOR_RESET << '\n';
-	std::cout << "  1. Extrair sumário (TOC) do artigo\n";
-	std::cout << "  2. Listar imagens do artigo\n";
-	std::cout << "  3. Buscar links para outros artigos\n";
-	std::cout << "  4. Voltar ao menu principal\n";
-	std::cout << "Opção: ";
+	std::cout << COLOR_YELLOW << "  Escolha uma opção:" << COLOR_RESET << '\n';
+	std::cout << "    1. Extrair sumário (TOC) do artigo\n";
+	std::cout << "    2. Listar imagens do artigo\n";
+	std::cout << "    3. Buscar links para outros artigos\n";
+	std::cout << "    4. Voltar ao menu principal\n";
+	std::cout << "  Opção: ";
 
 	switch (get_choice(1, 4)) {
 		case 1: show_toc(html_content); return true;
@@ -450,7 +506,7 @@ bool article_menu(const std::string& html_content) {
  * Processa a entrada da URL pelo usuário e gerencia o fluxo do artigo.
  */
 void handle_url_input() {
-	std::cout << "Digite a URL: ";
+	std::cout << "  Digite a URL: ";
 	std::string url;
 	std::getline(std::cin, url);
 
@@ -484,10 +540,10 @@ bool main_menu() {
 	CLEAR_SCREEN();
 	display_header("Regex Scraper");
 
-	std::cout << COLOR_YELLOW << "Escolha uma opção:" << COLOR_RESET << '\n';
-	std::cout << "  1. Buscar URL\n";
-	std::cout << "  2. Sair\n";
-	std::cout << "Opção: ";
+	std::cout << COLOR_YELLOW << "  Escolha uma opção:" << COLOR_RESET << '\n';
+	std::cout << "    1. Buscar URL\n";
+	std::cout << "    2. Sair\n";
+	std::cout << "  Opção: ";
 
 	switch (get_choice(1, 2)) {
 		case 1:

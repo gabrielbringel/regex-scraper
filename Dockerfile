@@ -25,6 +25,9 @@ RUN mkdir build && \
 # Estágio 2: Runtime (opcional, para imagem menor)
 FROM alpine:latest
 
+# Define variável de ambiente para indicar que está em Docker
+ENV IN_DOCKER=true
+
 # Instala dependências de runtime
 RUN apk add --no-cache \
     libstdc++ \
