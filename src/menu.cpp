@@ -1,6 +1,6 @@
 /**
  * menu.cpp
- * Autor: Miguel Mochizuki Silva
+ * Autores: Gabriel Bringel Gonçalves e Miguel Mochizuki Silva
  * Descrição: Implementação de funções para exibição de menus e interação com o usuário.
  */
 #include "menu.hpp"

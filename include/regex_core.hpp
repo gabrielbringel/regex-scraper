@@ -1,6 +1,6 @@
 /**
  * regex_core.hpp
- * Autor: Miguel Mochizuki Silva
+ * Autores: Gabriel Bringel Gonçalves e Miguel Mochizuki Silva
  * Descrição: Protótipos de funções para manipulação de expressões regulares.
  */
 #include <regex>
@@ -20,7 +20,7 @@ namespace regex_core {
 		")<\\/title>"
 	);
 
-	const std::regex WIKIPEDIA_TOC_REGEX(R"(<div[^>]*class="[^"]*vector-toc-text[^"]*"[^>]*>[\s\S]*?(?:<a[^>]*>)?\s*<span[^>]*class="[^"]*vector-toc-numb[^"]*"[^>]*>([^<]*)</span>\s*<span>([^<]+)</span>)");
+	const std::regex WIKIPEDIA_TOC_REGEX(R"(<div[^>]*class="[^"]*vector-toc-text[^"]*"[^>]*>\s*<span[^>]*class="[^"]*vector-toc-numb[^"]*"[^>]*>([^<]*)</span>\s*<span>([^<]+)</span>)");
 
 	const std::regex WIKIPEDIA_IMAGE_REGEX(
 		"<img[^>]*src=\"([^\"]*)\"[^>]*(?:alt=\"([^\"]*)\")?[^>]*>"

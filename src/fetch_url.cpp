@@ -1,6 +1,6 @@
 /**
  * fetch_url.cpp
- * Autor: Miguel Mochizuki Silva
+ * Autores: Gabriel Bringel Gonçalves e Miguel Mochizuki Silva
  * Descrição: Implementação de fetch_url, que obtém o conteúdo HTML de uma URL e o retorna como uma string.
  */
 #include "fetch_url.hpp"

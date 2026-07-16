@@ -1,6 +1,6 @@
 /**
  * menu.hpp
- * Autor: Miguel Mochizuki Silva
+ * Autores: Gabriel Bringel Gonçalves e Miguel Mochizuki Silva
  * Descrição: Protótipos de funções para exibição de menus e interação com o usuário.
  */
 #ifndef MENU_HPP

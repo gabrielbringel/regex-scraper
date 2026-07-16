@@ -1,6 +1,6 @@
 /**
  * main.cpp
- * Autor: Miguel Mochizuki Silva
+ * Autores: Gabriel Bringel Gonçalves e Miguel Mochizuki Silva
  * Descrição: Ponto de entrada do programa
  */
 #include "fetch_url.hpp"

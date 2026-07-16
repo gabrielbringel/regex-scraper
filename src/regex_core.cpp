@@ -1,6 +1,6 @@
 /**
  * regex_core.cpp
- * Autor: Miguel Mochizuki Silva
+ * Autores: Gabriel Bringel Gonçalves e Miguel Mochizuki Silva
  * Descrição: Implementação de funções para manipulação de expressões regulares.
  */
 #include "regex_core.hpp"
